@@ -57,7 +57,7 @@ fun MapScreen(
                 modifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
                     .background(Color(0xFFEEEEEE))
-                    .padding(2.dp) // Reduzido de 4.dp para 2.dp
+                    .padding(2.dp)
             ) {
                 ToggleButton(
                     text = "Mapa",
@@ -79,17 +79,17 @@ fun MapScreen(
                 border = ButtonDefaults.outlinedButtonBorder(enabled = true)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), // Reduzido de 12/8 para 8/6
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF2ecc71))) // Reduzido de 8.dp para 6.dp
-                    Spacer(modifier = Modifier.width(4.dp)) // Reduzido de 6.dp para 4.dp
-                    Text(text = "TEMPO REAL", fontSize = 8.sp, fontWeight = FontWeight.Bold) // Reduzido de 10.sp para 8.sp
+                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF2ecc71)))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "TEMPO REAL", fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp)) // Reduzido de 16.dp para 8.dp
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Search Bar - Only show in LIST mode
         if (viewMode == MapViewMode.LIST) {
@@ -151,20 +151,20 @@ fun ToggleButton(text: String, icon: ImageVector, isSelected: Boolean, onClick: 
         shape = RoundedCornerShape(20.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp), // Aumentado lateralmente de 12 para 24
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (isSelected) Color.White else Color.Gray,
-                modifier = Modifier.size(16.dp) // Reduzido
+                modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = text,
                 color = if (isSelected) Color.White else Color.Gray,
-                fontSize = 11.sp, // Reduzido
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -203,12 +203,12 @@ fun RestaurantListItem(restaurant: Restaurant) {
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = if (restaurant.fotos.isNotEmpty()) restaurant.fotos[0] else null,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Box(
+            modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(Color.Gray),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = restaurant.iniciais, color = Color.White, fontWeight = FontWeight.Bold)
+        }
         
         Spacer(modifier = Modifier.width(12.dp))
         
@@ -219,51 +219,15 @@ fun RestaurantListItem(restaurant: Restaurant) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = restaurant.nome, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(text = "⭐️ ${restaurant.nota}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFf1c40f))
+                // Score is not in current API, keeping as mocked 5.0 for UI consistency
+                Text(text = "⭐️ 5.0", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFf1c40f))
             }
             
-            Text(text = "${restaurant.categoria} • ${restaurant.endereco}", color = Color.Gray, fontSize = 12.sp)
+            Text(text = restaurant.endereco, color = Color.Gray, fontSize = 12.sp)
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    color = when(restaurant.statusText) {
-                        "Cheio que só" -> Color.Red.copy(alpha = 0.1f)
-                        "Embaçado" -> Color(0xFFE67E22).copy(alpha = 0.1f)
-                        else -> Color(0xFF2ecc71).copy(alpha = 0.1f)
-                    },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier.size(6.dp).clip(CircleShape).background(
-                                when(restaurant.statusText) {
-                                    "Cheio que só" -> Color.Red
-                                    "Embaçado" -> Color(0xFFE67E22)
-                                    else -> Color(0xFF2ecc71)
-                                }
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = restaurant.statusText,
-                            color = when(restaurant.statusText) {
-                                "Cheio que só" -> Color.Red
-                                "Embaçado" -> Color(0xFFE67E22)
-                                else -> Color(0xFF2ecc71)
-                            },
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = restaurant.statusTime, color = Color.Gray, fontSize = 12.sp)
-            }
+            Text(text = restaurant.descricao, color = Color.DarkGray, fontSize = 10.sp, maxLines = 1)
         }
     }
 }
@@ -340,37 +304,6 @@ fun LeafletMapView(restaurants: List<Restaurant>) {
                             seletor.appendChild(btn);
                         });
 
-                        const bairroGeoJSON = {
-                          "type": "FeatureCollection",
-                          "features": [
-                            {
-                              "type": "Feature",
-                              "properties": {},
-                              "geometry": {
-                                "type": "Polygon",
-                                "coordinates": [
-                                  [
-                                    [-34.8741692, -8.0514117],
-                                    [-34.8687729, -8.0434751],
-                                    [-34.8658207, -8.0448959],
-                                    [-34.8672422, -8.0483415],
-                                    [-34.8672285, -8.0537111],
-                                    [-34.8719734, -8.0673902],
-                                    [-34.8748158, -8.0667287],
-                                    [-34.8746556, -8.0631961],
-                                    [-34.8741553, -8.0597143],
-                                    [-34.8741692, -8.0514117]
-                                  ]
-                                ]
-                              }
-                            }
-                          ]
-                        };
-
-                        L.geoJSON(bairroGeoJSON, {
-                            style: { color: '#007bff', weight: 3, fillOpacity: 0 }
-                        }).addTo(map);
-
                         restaurants.forEach(rest => {
                             const icon = L.divIcon({
                                 className: '',
@@ -380,11 +313,11 @@ fun LeafletMapView(restaurants: List<Restaurant>) {
                             
                             const popup = '<div class="restaurante-card">' +
                                 '<h3>' + rest.nome + '</h3>' +
-                                '<p><b>' + rest.categoria + '</b></p>' +
-                                '<p>⭐️ ' + rest.nota + '</p>' +
+                                '<p><b>' + rest.endereco + '</b></p>' +
+                                '<p>' + rest.descricao + '</p>' +
                                 '</div>';
                             
-                            L.marker([rest.lat, rest.lng], { icon: icon }).bindPopup(popup).addTo(map);
+                            L.marker([parseFloat(rest.latitude), parseFloat(rest.longitude)], { icon: icon }).bindPopup(popup).addTo(map);
                         });
 
                         setTimeout(() => { map.invalidateSize(); }, 500);

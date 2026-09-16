@@ -18,13 +18,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.aquitabom.R
 import com.example.aquitabom.ui.CommonTopBar
 import com.example.aquitabom.data.model.Post
 
@@ -108,16 +106,18 @@ fun PostItem(post: Post) {
                 modifier = Modifier.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = post.userProfilePic,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                // Mock user profile pic since API doesn't provide it yet
+                Box(
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = post.nomeUsuario.take(1).uppercase(), fontWeight = FontWeight.Bold)
+                }
+                
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = post.userName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(text = post.nomeUsuario, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.Outlined.CheckCircle,
@@ -127,12 +127,11 @@ fun PostItem(post: Post) {
                         )
                     }
                     Text(
-                        text = "${post.restaurantName} • ${post.location}",
+                        text = post.nomeRestaurante,
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
                 }
-                Text(text = "⭐️ ${post.rating}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 IconButton(onClick = {}) {
                     Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.Gray)
                 }
@@ -141,27 +140,12 @@ fun PostItem(post: Post) {
             // Image
             Box {
                 AsyncImage(
-                    model = post.postImage,
+                    model = post.imagemUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxWidth().height(250.dp),
                     contentScale = ContentScale.Crop
                 )
                 
-                Surface(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Red))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = post.status, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
                 Surface(
                     modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
                     color = Color.White,
@@ -173,41 +157,31 @@ fun PostItem(post: Post) {
                     ) {
                         Icon(Icons.Outlined.Restaurant, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFE67E22))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = post.restaurantName, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = post.nomeRestaurante, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            // Tags
-            Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusTag(text = post.status, color = Color.Red.copy(alpha = 0.1f), textColor = Color.Red)
-                StatusTag(text = post.timeAgo, color = Color.Gray.copy(alpha = 0.1f), textColor = Color.Gray, icon = Icons.Outlined.AccessTime)
-                post.waitTime?.let {
-                    StatusTag(text = "ESPERA ~$it", color = Color.Red.copy(alpha = 0.1f), textColor = Color.Red, icon = Icons.Outlined.HourglassEmpty)
+            // Title & Description
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(text = post.titulo, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = post.descricao, fontSize = 14.sp)
+                
+                if (post.dataCriacao != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = post.dataCriacao, fontSize = 10.sp, color = Color.Gray)
                 }
             }
 
-            // Description
-            Text(
-                text = post.description,
-                modifier = Modifier.padding(horizontal = 12.dp),
-                fontSize = 14.sp
-            )
-            Text(
-                text = "... mais",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
-
-            // Actions
+            // Actions (Mocked counts for now as API doesn't have likes/comments yet)
             Row(
                 modifier = Modifier.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ActionButton(icon = Icons.Outlined.Favorite, text = post.likes.toString(), tint = Color.Red)
+                ActionButton(icon = Icons.Outlined.Favorite, text = "0", tint = Color.Red)
                 Spacer(modifier = Modifier.width(16.dp))
-                ActionButton(icon = Icons.Outlined.ChatBubbleOutline, text = post.comments.toString())
+                ActionButton(icon = Icons.Outlined.ChatBubbleOutline, text = "0")
                 Spacer(modifier = Modifier.width(16.dp))
                 Icon(Icons.Outlined.Send, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.weight(1f))

@@ -23,4 +23,6 @@ object NetworkModule {
         .build()
 
     val authService: AuthService = retrofit.create(AuthService::class.java)
+    val restaurantService: RestaurantService = retrofit.create(RestaurantService::class.java)
+    val postService: PostService = retrofit.create(PostService::class.java)
 }

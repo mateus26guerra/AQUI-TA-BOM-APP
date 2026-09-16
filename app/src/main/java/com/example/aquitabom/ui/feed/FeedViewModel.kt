@@ -30,12 +30,11 @@ class FeedViewModel(
     fun loadPosts() {
         viewModelScope.launch {
             uiState = FeedUiState.Loading
-            try {
-                val posts = repository.getFeedPosts()
-                uiState = FeedUiState.Success(posts)
-            } catch (e: Exception) {
-                uiState = FeedUiState.Error(e.message ?: "Erro ao carregar feed")
-            }
+            val result = repository.getFeedPosts()
+            result.fold(
+                onSuccess = { uiState = FeedUiState.Success(it) },
+                onFailure = { uiState = FeedUiState.Error(it.message ?: "Erro ao carregar feed") }
+            )
         }
     }
 }
