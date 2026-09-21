@@ -23,10 +23,10 @@ enum class MapViewMode {
 }
 
 class MapViewModel(
-    application: Application,
-    private val repository: RestaurantRepository = RestaurantRepositoryImpl()
+    application: Application
 ) : AndroidViewModel(application) {
 
+    private val repository: RestaurantRepository = RestaurantRepositoryImpl()
     private val sessionManager = SessionManager(application)
     
     var uiState by mutableStateOf<MapUiState>(MapUiState.Loading)
@@ -66,6 +66,10 @@ class MapViewModel(
     fun onSearchQueryChange(newQuery: String) {
         searchQuery = newQuery
         filterRestaurants()
+    }
+
+    fun onRefresh() {
+        loadRestaurants()
     }
 
     private fun filterRestaurants() {

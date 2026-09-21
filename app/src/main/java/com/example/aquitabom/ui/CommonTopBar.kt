@@ -37,14 +37,14 @@ fun CommonTopBar() {
                 Text(
                     text = "Aqui Tá Bom",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color(0xFFE67E22),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Outlined.LocationOn,
                         contentDescription = null,
-                        tint = Color(0xFFE67E22),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -67,10 +67,11 @@ fun CommonTopBar() {
             Icon(
                 imageVector = Icons.Outlined.Notifications,
                 contentDescription = null,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(28.dp),
+                tint = MaterialTheme.colorScheme.onBackground
             )
             Surface(
-                color = Color(0xFFE67E22),
+                color = MaterialTheme.colorScheme.primary,
                 shape = CircleShape,
                 modifier = Modifier
                     .size(10.dp)

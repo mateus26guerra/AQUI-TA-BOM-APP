@@ -1,12 +1,25 @@
 package com.example.aquitabom.data.remote
 
+import com.example.aquitabom.data.local.AuthEventBus
+import kotlinx.coroutines.runBlocking
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object NetworkModule {
-    private const val BASE_URL = "https://aqui-ta-bom-backend-container.onrender.com/"
+    private const val BASE_URL = "https://aqui-ta-bom-api.onrender.com/"
+
+    private val authInterceptor = Interceptor { chain ->
+        val response = chain.proceed(chain.request())
+        if (response.code == 401) {
+            runBlocking {
+                AuthEventBus.emitUnauthorized()
+            }
+        }
+        response
+    }
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -14,6 +27,7 @@ object NetworkModule {
 
     private val client = OkHttpClient.Builder()
         .addInterceptor(logging)
+        .addInterceptor(authInterceptor)
         .build()
 
     private val retrofit = Retrofit.Builder()

@@ -3,12 +3,9 @@ package com.example.aquitabom.ui.map
 import android.annotation.SuppressLint
 import android.util.Log
 import android.view.ViewGroup
-import android.webkit.ConsoleMessage
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,7 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,12 +34,13 @@ import com.google.gson.Gson
 
 @Composable
 fun MapScreen(
+    onRestaurantClick: (Restaurant) -> Unit,
     viewModel: MapViewModel = viewModel()
 ) {
     val uiState = viewModel.uiState
     val viewMode = viewModel.viewMode
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F8F8))) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         CommonTopBar()
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -56,7 +54,7 @@ fun MapScreen(
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFEEEEEE))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(2.dp)
             ) {
                 ToggleButton(
@@ -75,7 +73,7 @@ fun MapScreen(
             
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 border = ButtonDefaults.outlinedButtonBorder(enabled = true)
             ) {
                 Row(
@@ -84,7 +82,12 @@ fun MapScreen(
                 ) {
                     Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF2ecc71)))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "TEMPO REAL", fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "TEMPO REAL", 
+                        fontSize = 8.sp, 
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
@@ -109,15 +112,17 @@ fun MapScreen(
                                 Icon(Icons.Outlined.Close, contentDescription = null, tint = Color.Gray)
                             }
                         }
-                        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color(0xFFEEEEEE)))
+                        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant))
                     }
                 },
                 shape = RoundedCornerShape(26.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFEEEEEE),
-                    unfocusedContainerColor = Color(0xFFEEEEEE),
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 )
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -130,13 +135,22 @@ fun MapScreen(
                 }
                 is MapUiState.Success -> {
                     if (viewMode == MapViewMode.MAP) {
-                        LeafletMapView(uiState.restaurants)
+                        LeafletMapView(uiState.restaurants, onRestaurantClick)
                     } else {
-                        RestaurantList(uiState.restaurants)
+                        RestaurantList(uiState.restaurants, onRestaurantClick)
                     }
                 }
                 is MapUiState.Error -> {
-                    Text(text = uiState.message, modifier = Modifier.align(Alignment.Center))
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(text = uiState.message, color = Color.Red)
+                        Button(onClick = { viewModel.onRefresh() }) {
+                            Text("Tentar novamente")
+                        }
+                    }
                 }
             }
         }
@@ -172,70 +186,118 @@ fun ToggleButton(text: String, icon: ImageVector, isSelected: Boolean, onClick: 
 }
 
 @Composable
-fun RestaurantList(restaurants: List<Restaurant>) {
+fun RestaurantList(restaurants: List<Restaurant>, onRestaurantClick: (Restaurant) -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "RESULTADO", fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 12.sp)
-            Text(text = "${restaurants.size} encontrados", color = Color.Gray, fontSize = 12.sp)
+            Text(
+                text = "RESULTADO", 
+                fontWeight = FontWeight.Bold, 
+                color = Color.Gray, 
+                fontSize = 12.sp
+            )
+            Text(
+                text = "${restaurants.size} encontrados", 
+                color = Color.Gray, 
+                fontSize = 12.sp
+            )
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
-            items(restaurants) { restaurant ->
-                RestaurantListItem(restaurant)
+        if (restaurants.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Nenhum restaurante encontrado",
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(restaurants) { restaurant ->
+                    RestaurantListItem(restaurant, onClick = { onRestaurantClick(restaurant) })
+                }
             }
         }
     }
 }
 
 @Composable
-fun RestaurantListItem(restaurant: Restaurant) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+fun RestaurantListItem(restaurant: Restaurant, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        color = Color.Transparent
     ) {
-        Box(
-            modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(Color.Gray),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = restaurant.iniciais, color = Color.White, fontWeight = FontWeight.Bold)
-        }
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = restaurant.nome, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                // Score is not in current API, keeping as mocked 5.0 for UI consistency
-                Text(text = "⭐️ 5.0", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFf1c40f))
+            if (restaurant.urlImagem != null) {
+                AsyncImage(
+                    model = restaurant.urlImagem,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = restaurant.iniciais, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                }
             }
             
-            Text(text = restaurant.endereco, color = Color.Gray, fontSize = 12.sp)
+            Spacer(modifier = Modifier.width(12.dp))
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(text = restaurant.descricao, color = Color.DarkGray, fontSize = 10.sp, maxLines = 1)
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = restaurant.nome, 
+                        fontWeight = FontWeight.Bold, 
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(text = "⭐️ 5.0", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFf1c40f))
+                }
+                
+                Text(text = restaurant.endereco, color = Color.Gray, fontSize = 12.sp)
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = restaurant.descricao, 
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), 
+                    fontSize = 10.sp, 
+                    maxLines = 1
+                )
+            }
         }
     }
 }
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun LeafletMapView(restaurants: List<Restaurant>) {
+fun LeafletMapView(restaurants: List<Restaurant>, onRestaurantClick: (Restaurant) -> Unit) {
     val restaurantsJson = Gson().toJson(restaurants)
+    val currentRestaurants by rememberUpdatedState(restaurants)
+    val currentOnClick by rememberUpdatedState(onRestaurantClick)
     
     val htmlContent = """
         <!DOCTYPE html>
@@ -264,7 +326,16 @@ fun LeafletMapView(restaurants: List<Restaurant>) {
                     align-items: center; justify-content: center; border: 2px solid white;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
                 }
-                .restaurante-card { text-align: center; min-width: 140px; font-family: sans-serif; }
+                .restaurante-card { text-align: center; min-width: 160px; font-family: sans-serif; cursor: pointer; }
+                .restaurante-card img {
+                    width: 100%; height: 100px; object-fit: cover;
+                    border-radius: 8px; margin-bottom: 8px; background: #eee;
+                }
+                .btn-ver-mais {
+                    background: #E67E22; color: white; border: none; padding: 8px 12px;
+                    border-radius: 4px; font-weight: bold; margin-top: 8px; cursor: pointer;
+                    width: 100%;
+                }
             </style>
         </head>
         <body>
@@ -304,20 +375,59 @@ fun LeafletMapView(restaurants: List<Restaurant>) {
                             seletor.appendChild(btn);
                         });
 
-                        restaurants.forEach(rest => {
+                        const bairroGeoJSON = {
+                          "type": "FeatureCollection",
+                          "features": [
+                            {
+                              "type": "Feature",
+                              "properties": {},
+                              "geometry": {
+                                "type": "Polygon",
+                                "coordinates": [
+                                  [
+                                    [-34.8741692, -8.0514117],
+                                    [-34.8687729, -8.0434751],
+                                    [-34.8658207, -8.0448959],
+                                    [-34.8672422, -8.0483415],
+                                    [-34.8672285, -8.0537111],
+                                    [-34.8719734, -8.0673902],
+                                    [-34.8748158, -8.0667287],
+                                    [-34.8746556, -8.0631961],
+                                    [-34.8741553, -8.0597143],
+                                    [-34.8741692, -8.0514117]
+                                  ]
+                                ]
+                              }
+                            }
+                          ]
+                        };
+
+                        L.geoJSON(bairroGeoJSON, {
+                            style: { color: '#007bff', weight: 2, fillOpacity: 0 }
+                        }).addTo(map);
+
+                        restaurants.forEach((rest, index) => {
+                            if (!rest.latitude || !rest.longitude) return;
+                            let lat = parseFloat(rest.latitude);
+                            let lng = parseFloat(rest.longitude);
+                            if (lng > 0) lng = -lng; 
+
                             const icon = L.divIcon({
                                 className: '',
                                 html: '<div class="pino-restaurante">' + rest.iniciais + '</div>',
                                 iconSize: [32, 32], iconAnchor: [16, 16]
                             });
                             
-                            const popup = '<div class="restaurante-card">' +
-                                '<h3>' + rest.nome + '</h3>' +
+                            let popup = '<div class="restaurante-card">';
+                            if (rest.urlImagem) {
+                                popup += '<img src="' + rest.urlImagem + '" alt="' + rest.nome + '">';
+                            }
+                            popup += '<h3>' + rest.nome + '</h3>' +
                                 '<p><b>' + rest.endereco + '</b></p>' +
-                                '<p>' + rest.descricao + '</p>' +
+                                '<button class="btn-ver-mais" onclick="Android.onRestaurantClick(' + index + ')">Ver avaliações</button>' +
                                 '</div>';
                             
-                            L.marker([parseFloat(rest.latitude), parseFloat(rest.longitude)], { icon: icon }).bindPopup(popup).addTo(map);
+                            L.marker([lat, lng], { icon: icon }).bindPopup(popup).addTo(map);
                         });
 
                         setTimeout(() => { map.invalidateSize(); }, 500);
@@ -353,6 +463,18 @@ fun LeafletMapView(restaurants: List<Restaurant>) {
                     useWideViewPort = true
                     mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 }
+                
+                // Add Javascript Interface
+                addJavascriptInterface(object {
+                    @JavascriptInterface
+                    fun onRestaurantClick(index: Int) {
+                        val restaurants = currentRestaurants
+                        if (index >= 0 && index < restaurants.size) {
+                            currentOnClick(restaurants[index])
+                        }
+                    }
+                }, "Android")
+                
                 loadDataWithBaseURL("https://openstreetmap.org", htmlContent, "text/html", "UTF-8", null)
             }
         },

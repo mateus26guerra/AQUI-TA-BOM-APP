@@ -20,10 +20,10 @@ sealed class LoginUiState {
 }
 
 class LoginViewModel(
-    application: Application,
-    private val repository: AuthRepository = AuthRepositoryImpl()
+    application: Application
 ) : AndroidViewModel(application) {
 
+    private val repository: AuthRepository = AuthRepositoryImpl()
     private val sessionManager = SessionManager(application)
     
     var email by mutableStateOf("")

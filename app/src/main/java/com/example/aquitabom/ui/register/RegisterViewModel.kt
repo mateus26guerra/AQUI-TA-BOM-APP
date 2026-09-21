@@ -17,9 +17,9 @@ sealed class RegisterUiState {
     data class Error(val message: String) : RegisterUiState()
 }
 
-class RegisterViewModel(
+class RegisterViewModel : ViewModel() {
+
     private val repository: AuthRepository = AuthRepositoryImpl()
-) : ViewModel() {
 
     var nome by mutableStateOf("")
     var email by mutableStateOf("")
