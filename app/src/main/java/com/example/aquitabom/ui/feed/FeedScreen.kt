@@ -40,6 +40,7 @@ fun FeedScreen(
 ) {
     val uiState = viewModel.uiState
     var selectedPost by remember { mutableStateOf<Post?>(null) }
+    var openComments by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         CommonTopBar()
@@ -72,7 +73,14 @@ fun FeedScreen(
                                     post = post, 
                                     onLikeClick = { viewModel.toggleLike(post) },
                                     avatarColor = themeViewModel.avatarColor,
-                                    onClick = { selectedPost = post }
+                                    onClick = {
+                                        openComments = false
+                                        selectedPost = post
+                                    },
+                                    onCommentsClick = {
+                                        openComments = true
+                                        selectedPost = post
+                                    }
                                 )
                             }
                         }
@@ -81,6 +89,7 @@ fun FeedScreen(
                             PostDetailDialog(
                                 post = post,
                                 onDismiss = { selectedPost = null },
+                                openComments = openComments,
                                 onRestaurantClick = {
                                     selectedPost = null
                                     onRestaurantClick(it)
@@ -139,7 +148,8 @@ fun PostItem(
     post: Post,
     onLikeClick: () -> Unit,
     avatarColor: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onCommentsClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -181,7 +191,16 @@ fun PostItem(
                         color = Color.Gray
                     )
                 }
-                Text(text = "⭐️ ${post.nota ?: 0}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Star,
+                        contentDescription = "Nota",
+                        tint = Color(0xFFFFC107),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(text = (post.nota ?: 0).toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
                 IconButton(onClick = {}) {
                     Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.Gray)
                 }
@@ -240,10 +259,6 @@ fun PostItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = post.descricao ?: "", fontSize = 14.sp)
                 
-                if (post.dataCriacao != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = post.dataCriacao, fontSize = 10.sp, color = Color.Gray)
-                }
             }
 
             // Actions
@@ -262,7 +277,11 @@ fun PostItem(
                 )
                 
                 Spacer(modifier = Modifier.width(16.dp))
-                ActionButton(icon = Icons.Outlined.ChatBubbleOutline, text = "0")
+                ActionButton(
+                    icon = Icons.Outlined.ChatBubbleOutline,
+                    text = (post.quantidadeComentarios ?: 0).toString(),
+                    onClick = onCommentsClick
+                )
                 Spacer(modifier = Modifier.width(16.dp))
                 Icon(Icons.Outlined.Send, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.weight(1f))

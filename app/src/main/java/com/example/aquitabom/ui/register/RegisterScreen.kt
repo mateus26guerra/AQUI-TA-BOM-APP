@@ -54,7 +54,7 @@ fun RegisterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .imePadding()
     ) {
         Column(
@@ -86,13 +86,13 @@ fun RegisterScreen(
                         text = "Criar Conta",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onBackground
                     )
 
                     Text(
                         text = "Junte-se à nossa comunidade e descubra os melhores lugares",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
                     )
@@ -107,7 +107,7 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .height(56.dp)
                     .clip(RoundedCornerShape(28.dp)),
-                color = Color(0xFFF5F5F5)
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(modifier = Modifier.padding(4.dp)) {
                     TextButton(
@@ -116,18 +116,21 @@ fun RegisterScreen(
                             .weight(1f)
                             .fillMaxHeight()
                     ) {
-                        Text(text = "Entrar", color = Color.Gray)
+                        Text(text = "Entrar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Button(
                         onClick = { },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
                         shape = RoundedCornerShape(24.dp),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                     ) {
-                        Text(text = "Cadastrar", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text(text = "Cadastrar", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -140,21 +143,21 @@ fun RegisterScreen(
                     text = "NOME COMPLETO",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = viewModel.nome,
                     onValueChange = { viewModel.nome = it },
-                    placeholder = { Text("Seu nome", color = Color.LightGray) },
+                    placeholder = { Text("Seu nome", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.LightGray) },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Color(0xFFF9F9F9),
-                        focusedContainerColor = Color(0xFFF9F9F9),
-                        unfocusedBorderColor = Color(0xFFEEEEEE),
-                        focusedBorderColor = Color(0xFFE67E22)
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -167,21 +170,21 @@ fun RegisterScreen(
                     text = "E-MAIL",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = viewModel.email,
                     onValueChange = { viewModel.email = it },
-                    placeholder = { Text("seu@email.com", color = Color.LightGray) },
+                    placeholder = { Text("seu@email.com", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color.LightGray) },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Color(0xFFF9F9F9),
-                        focusedContainerColor = Color(0xFFF9F9F9),
-                        unfocusedBorderColor = Color(0xFFEEEEEE),
-                        focusedBorderColor = Color(0xFFE67E22)
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -194,31 +197,31 @@ fun RegisterScreen(
                     text = "SENHA",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = viewModel.senha,
                     onValueChange = { viewModel.senha = it },
-                    placeholder = { Text("••••••••", color = Color.LightGray) },
+                    placeholder = { Text("••••••••", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color.LightGray) },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                 contentDescription = null,
-                                tint = Color.LightGray
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Color(0xFFF9F9F9),
-                        focusedContainerColor = Color(0xFFF9F9F9),
-                        unfocusedBorderColor = Color(0xFFEEEEEE),
-                        focusedBorderColor = Color(0xFFE67E22)
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -235,13 +238,21 @@ fun RegisterScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp), ambientColor = Color(0xFFE67E22), spotColor = Color(0xFFE67E22)),
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        ambientColor = MaterialTheme.colorScheme.primary,
+                        spotColor = MaterialTheme.colorScheme.primary
+                    ),
                 enabled = uiState !is RegisterUiState.Loading,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE67E22)),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 if (uiState is RegisterUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 } else {
                     Text(text = "Criar Conta", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }

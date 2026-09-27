@@ -101,7 +101,7 @@ class PostRepositoryImpl(
 
     override suspend fun deletePost(token: String, id: String): Result<Unit> {
         return try {
-            val response = service.deletePost("******", id)
+            val response = service.deletePost("Bearer $token", id)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {

@@ -7,7 +7,8 @@ data class Restaurant(
     val latitude: String,
     val longitude: String,
     val endereco: String,
-    val descricao: String,
+    val descricao: String? = null,
     val telefone: String,
-    val urlImagem: String? = null
+    val urlImagem: String? = null,
+    val statusLotacao: String? = null
 )

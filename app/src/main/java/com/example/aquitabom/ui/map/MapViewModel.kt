@@ -50,7 +50,7 @@ class MapViewModel(
 
         viewModelScope.launch {
             uiState = MapUiState.Loading
-            val result = repository.getNearbyRestaurants(token)
+            val result = repository.getMapRestaurants(token)
             result.fold(
                 onSuccess = {
                     allRestaurants = it

@@ -1,5 +1,7 @@
 package com.example.aquitabom.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -10,6 +12,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,7 +52,9 @@ fun MainScreen(
     themeViewModel: ThemeViewModel
 ) {
     val navController = rememberNavController()
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     var selectedRestaurantForDetail by remember { mutableStateOf<Restaurant?>(null) }
+    var selectedRestaurantId by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -115,6 +120,7 @@ fun MainScreen(
                                         it.nome.equals(restaurantName, ignoreCase = true)
                                     }?.let { restaurant ->
                                         selectedRestaurantForDetail = restaurant
+                                        selectedRestaurantId = restaurant.id
                                         navController.navigate(Screen.RestaurantDetail.route)
                                     }
                                 }
@@ -124,10 +130,14 @@ fun MainScreen(
                 ) 
             }
             composable(Screen.Map.route) { 
-                MapScreen(onRestaurantClick = { restaurant ->
-                    selectedRestaurantForDetail = restaurant
-                    navController.navigate(Screen.RestaurantDetail.route)
-                }) 
+                MapScreen(
+                    isVisible = currentRoute == Screen.Map.route,
+                    onRestaurantClick = { restaurant ->
+                        selectedRestaurantForDetail = restaurant
+                        selectedRestaurantId = restaurant.id
+                        navController.navigate(Screen.RestaurantDetail.route)
+                    }
+                ) 
             }
             composable(Screen.Add.route) { 
                 CreatePostScreen(
@@ -153,6 +163,7 @@ fun MainScreen(
                                         it.nome.equals(restaurantName, ignoreCase = true)
                                     }?.let { restaurant ->
                                         selectedRestaurantForDetail = restaurant
+                                        selectedRestaurantId = restaurant.id
                                         navController.navigate(Screen.RestaurantDetail.route)
                                     }
                                 }
@@ -168,11 +179,33 @@ fun MainScreen(
                 ) 
             }
             composable(Screen.RestaurantDetail.route) {
+                LaunchedEffect(selectedRestaurantId) {
+                    if (selectedRestaurantForDetail == null && selectedRestaurantId != null) {
+                        val token = sessionManager.fetchAuthToken()
+                        if (token != null) {
+                            restaurantRepository.getNearbyRestaurants(token).onSuccess { restaurants ->
+                                selectedRestaurantForDetail = restaurants.firstOrNull {
+                                    it.id == selectedRestaurantId
+                                }
+                            }
+                        }
+                    }
+                }
+
                 selectedRestaurantForDetail?.let { restaurant ->
                     RestaurantDetailScreen(
                         restaurant = restaurant,
-                        onBack = { navController.popBackStack() }
+                        onBack = {
+                            selectedRestaurantForDetail = null
+                            selectedRestaurantId = null
+                            navController.popBackStack()
+                        }
                     )
+                } ?: Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
         }

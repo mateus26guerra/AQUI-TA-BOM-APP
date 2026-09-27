@@ -3,6 +3,8 @@ package com.example.aquitabom.ui.post
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -104,15 +106,46 @@ class CreatePostViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun getFileFromUri(uri: Uri): File {
         val context = getApplication<Application>().applicationContext
-        val bitmap = BitmapFactory.decodeStream(context.contentResolver.openInputStream(uri))
+        val inputStream = requireNotNull(context.contentResolver.openInputStream(uri))
+        val bitmap = requireNotNull(inputStream.use { BitmapFactory.decodeStream(it) })
+        val orientationStream = requireNotNull(context.contentResolver.openInputStream(uri))
+        val orientation = orientationStream.use {
+            ExifInterface(it).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+        }
+        val correctedBitmap = applyExifOrientation(bitmap, orientation)
         
         val file = File(context.cacheDir, "temp_image.jpg")
-        val outputStream = FileOutputStream(file)
-        
-        // Comprime a imagem para 70% da qualidade original para reduzir o tamanho do arquivo
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-        
-        outputStream.close()
+        FileOutputStream(file).use { outputStream ->
+            correctedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+        }
+        if (correctedBitmap !== bitmap) {
+            correctedBitmap.recycle()
+        }
+        bitmap.recycle()
         return file
+    }
+
+    private fun applyExifOrientation(bitmap: Bitmap, orientation: Int): Bitmap {
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.setRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.setRotate(-90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
+            else -> return bitmap
+        }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 }

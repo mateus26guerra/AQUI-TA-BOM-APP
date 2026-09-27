@@ -3,6 +3,8 @@ package com.example.aquitabom.ui.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -10,8 +12,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -31,6 +40,11 @@ import coil.compose.AsyncImage
 import com.example.aquitabom.data.model.Post
 import com.example.aquitabom.ui.CommonTopBar
 import com.example.aquitabom.ui.theme.ThemeViewModel
+import java.time.OffsetDateTime
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -252,8 +266,21 @@ fun PostDetailDialog(
     onDismiss: () -> Unit,
     onRestaurantClick: ((String) -> Unit)? = null,
     onMoreClick: (() -> Unit)? = null,
-    themeViewModel: ThemeViewModel = viewModel()
+    themeViewModel: ThemeViewModel = viewModel(),
+    commentsViewModel: CommentsViewModel = viewModel(),
+    openComments: Boolean = false
 ) {
+    var commentText by remember { mutableStateOf("") }
+    val postId = post.id
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(postId) {
+        postId?.let { commentsViewModel.loadComments(it) }
+    }
+    LaunchedEffect(openComments, commentsViewModel.comments.size) {
+        if (openComments) scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -262,7 +289,7 @@ fun PostDetailDialog(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.surface
         ) {
-            Column {
+            Column(modifier = Modifier.verticalScroll(scrollState)) {
                 // Header with close button
                 Row(
                     modifier = Modifier
@@ -333,7 +360,27 @@ fun PostDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = post.titulo ?: "", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = post.titulo ?: "",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            val rating = (post.nota ?: 0).coerceIn(0, 5)
+                            repeat(5) { index ->
+                                Icon(
+                                    imageVector = if (index < rating) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                    contentDescription = if (index == 0) "Nota $rating de 5" else null,
+                                    tint = if (index < rating) Color(0xFFFFC107) else Color.LightGray,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                         if (post.status != null) {
                             Surface(
                                 color = when(post.status.uppercase()) {
@@ -393,15 +440,186 @@ fun PostDetailDialog(
                     
                     if (post.dataCriacao != null) {
                         Spacer(modifier = Modifier.height(16.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CalendarToday,
+                                    contentDescription = "Data da publicação",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = formatPostDate(post.dataCriacao),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Icon(
+                                    imageVector = Icons.Outlined.AccessTime,
+                                    contentDescription = "Hora da publicação",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = formatPostTime(post.dataCriacao),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Outlined.ChatBubbleOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = post.dataCriacao,
-                            fontSize = 12.sp,
-                            color = Color.Gray
+                            text = "Comentários (${
+                                if (commentsViewModel.isLoading) {
+                                    post.quantidadeComentarios ?: 0
+                                } else {
+                                    commentsViewModel.comments.size
+                                }
+                            })",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
+                    if (commentsViewModel.isLoading) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    } else if (commentsViewModel.comments.isEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Ainda não há comentários. Seja o primeiro!",
+                            color = Color.Gray,
+                            fontSize = 13.sp
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        commentsViewModel.comments.forEach { comment ->
+                            CommentRow(
+                                comment = comment,
+                                onDelete = { comment.id?.let(commentsViewModel::deleteComment) }
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                    }
+
+                    commentsViewModel.errorMessage?.let {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = commentText,
+                        onValueChange = { commentText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Escreva um comentário...") },
+                        maxLines = 3,
+                        trailingIcon = {
+                            IconButton(
+                                enabled = commentText.isNotBlank() && !commentsViewModel.isSending && postId != null,
+                                onClick = {
+                                    postId?.let {
+                                        commentsViewModel.addComment(it, commentText)
+                                        commentText = ""
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Send,
+                                    contentDescription = "Enviar comentário",
+                                    tint = if (commentText.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
+                                )
+                            }
+                        }
+                    )
                 }
             }
+
         }
     }
+}
+
+@Composable
+private fun CommentRow(
+    comment: com.example.aquitabom.data.model.Comment,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = comment.nomeUsuario?.firstOrNull()?.uppercase() ?: "U",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Surface(
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(comment.nomeUsuario ?: "Usuário", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(comment.texto, fontSize = 14.sp)
+            }
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Excluir comentário",
+                tint = Color.Gray
+            )
+        }
+    }
+}
+
+private fun parsePostDate(value: String): LocalDateTime? {
+    return try {
+        OffsetDateTime.parse(value).toLocalDateTime()
+    } catch (_: DateTimeParseException) {
+        try {
+            LocalDateTime.parse(value)
+        } catch (_: DateTimeParseException) {
+            null
+        }
+    }
+}
+
+private fun formatPostDate(value: String): String {
+    val date = parsePostDate(value) ?: return value
+    return date.format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", Locale("pt", "BR")))
+}
+
+private fun formatPostTime(value: String): String {
+    val date = parsePostDate(value) ?: return "--:--"
+    return date.format(DateTimeFormatter.ofPattern("HH:mm", Locale("pt", "BR")))
 }

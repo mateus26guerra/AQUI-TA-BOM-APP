@@ -1,6 +1,8 @@
 package com.example.aquitabom.ui.map
 
 import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.*
@@ -35,10 +37,17 @@ import com.google.gson.Gson
 @Composable
 fun MapScreen(
     onRestaurantClick: (Restaurant) -> Unit,
+    isVisible: Boolean = true,
     viewModel: MapViewModel = viewModel()
 ) {
     val uiState = viewModel.uiState
     val viewMode = viewModel.viewMode
+    var selectedRestaurant by remember { mutableStateOf<Restaurant?>(null) }
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            viewModel.onRefresh()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         CommonTopBar()
@@ -135,9 +144,15 @@ fun MapScreen(
                 }
                 is MapUiState.Success -> {
                     if (viewMode == MapViewMode.MAP) {
-                        LeafletMapView(uiState.restaurants, onRestaurantClick)
+                        LeafletMapView(
+                            restaurants = uiState.restaurants,
+                            onRestaurantClick = { selectedRestaurant = it }
+                        )
                     } else {
-                        RestaurantList(uiState.restaurants, onRestaurantClick)
+                        RestaurantList(
+                            restaurants = uiState.restaurants,
+                            onRestaurantClick = onRestaurantClick
+                        )
                     }
                 }
                 is MapUiState.Error -> {
@@ -153,8 +168,129 @@ fun MapScreen(
                     }
                 }
             }
+            selectedRestaurant?.let { restaurant ->
+                RestaurantPreviewCard(
+                    restaurant = restaurant,
+                    onDismiss = { selectedRestaurant = null },
+                    onOpenProfile = {
+                        selectedRestaurant = null
+                        onRestaurantClick(restaurant)
+                    }
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun BoxScope.RestaurantPreviewCard(
+    restaurant: Restaurant,
+    onDismiss: () -> Unit,
+    onOpenProfile: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            if (restaurant.urlImagem != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = restaurant.urlImagem,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    RestaurantPreviewInfo(restaurant, Modifier.weight(1f))
+                }
+            } else {
+                RestaurantPreviewInfo(restaurant)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onOpenProfile,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(vertical = 10.dp)
+                ) {
+                    Text("Ver detalhes do local", fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Text("Fechar", fontSize = 12.sp)
+                }
+            }
+
+        }
+    }
+}
+
+@Composable
+private fun RestaurantPreviewInfo(
+    restaurant: Restaurant,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = restaurant.nome,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        Text(
+            text = restaurant.endereco,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp,
+            maxLines = 1
+        )
+        restaurant.statusLotacao?.let { status ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Surface(
+                color = statusColor(status).copy(alpha = 0.16f),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(
+                    text = statusLabel(status),
+                    color = statusColor(status),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun statusLabel(status: String): String = when (status) {
+    "DE_BOA" -> "De boa"
+    "EMBACADO" -> "Embaçado"
+    "CHEIO_QUE_SO" -> "Cheio que só"
+    else -> status.replace("_", " ")
+}
+
+private fun statusColor(status: String): Color = when (status) {
+    "DE_BOA" -> Color(0xFF2ECC71)
+    "EMBACADO" -> Color(0xFFF1C40F)
+    "CHEIO_QUE_SO" -> Color(0xFFE74C3C)
+    else -> Color.Gray
 }
 
 @Composable
@@ -282,7 +418,7 @@ fun RestaurantListItem(restaurant: Restaurant, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = restaurant.descricao, 
+                    text = restaurant.descricao.orEmpty(), 
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), 
                     fontSize = 10.sp, 
                     maxLines = 1
@@ -309,40 +445,16 @@ fun LeafletMapView(restaurants: List<Restaurant>, onRestaurantClick: (Restaurant
             <style>
                 body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
                 #map { width: 100%; height: 100vh; background: #f0f0f0; }
-                .seletor-tema {
-                    position: absolute; top: 10px; right: 10px; z-index: 1000;
-                    background: rgba(255, 255, 255, 0.9); padding: 8px; border-radius: 8px;
-                    max-height: 50%; overflow-y: auto; font-family: sans-serif; font-size: 14px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                }
-                .seletor-tema button { 
-                    display: block; width: 100%; margin: 5px 0; padding: 8px;
-                    background: #fff; border: 1px solid #ccc; border-radius: 4px;
-                    text-align: left; font-weight: bold;
-                }
                 .pino-restaurante {
-                    background-color: #007bff; color: white; font-weight: bold; font-size: 12px;
+                    color: white; font-weight: bold; font-size: 12px;
                     border-radius: 50%; width: 32px; height: 32px; display: flex;
                     align-items: center; justify-content: center; border: 2px solid white;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-                }
-                .restaurante-card { text-align: center; min-width: 160px; font-family: sans-serif; cursor: pointer; }
-                .restaurante-card img {
-                    width: 100%; height: 100px; object-fit: cover;
-                    border-radius: 8px; margin-bottom: 8px; background: #eee;
-                }
-                .btn-ver-mais {
-                    background: #E67E22; color: white; border: none; padding: 8px 12px;
-                    border-radius: 4px; font-weight: bold; margin-top: 8px; cursor: pointer;
-                    width: 100%;
                 }
             </style>
         </head>
         <body>
             <div id="map"></div>
-            <div class="seletor-tema" id="seletor">
-                <strong>Temas</strong>
-            </div>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
             <script>
                 window.onload = function() {
@@ -354,26 +466,6 @@ fun LeafletMapView(restaurants: List<Restaurant>, onRestaurantClick: (Restaurant
                             attribution: '&copy; CARTO',
                             maxZoom: 20
                         }).addTo(map);
-
-                        const temas = {
-                            "Positron": positron,
-                            "Dark": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }),
-                            "OSM": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }),
-                            "Satélite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' })
-                        };
-                        
-                        let currentLayer = positron;
-                        
-                        const seletor = document.getElementById('seletor');
-                        Object.keys(temas).forEach(name => {
-                            const btn = document.createElement('button');
-                            btn.innerText = name;
-                            btn.onclick = () => {
-                                map.removeLayer(currentLayer);
-                                currentLayer = temas[name].addTo(map);
-                            };
-                            seletor.appendChild(btn);
-                        });
 
                         const bairroGeoJSON = {
                           "type": "FeatureCollection",
@@ -412,22 +504,23 @@ fun LeafletMapView(restaurants: List<Restaurant>, onRestaurantClick: (Restaurant
                             let lng = parseFloat(rest.longitude);
                             if (lng > 0) lng = -lng; 
 
+                            const statusColors = {
+                                "DE_BOA": "#2ecc71",
+                                "EMBACADO": "#f1c40f",
+                                "CHEIO_QUE_SO": "#e74c3c"
+                            };
+                            const pinColor = statusColors[rest.statusLotacao] || "#95a5a6";
                             const icon = L.divIcon({
                                 className: '',
-                                html: '<div class="pino-restaurante">' + rest.iniciais + '</div>',
+                                html: '<div class="pino-restaurante" style="background-color: ' + pinColor + ';">' + rest.iniciais + '</div>',
                                 iconSize: [32, 32], iconAnchor: [16, 16]
                             });
                             
-                            let popup = '<div class="restaurante-card">';
-                            if (rest.urlImagem) {
-                                popup += '<img src="' + rest.urlImagem + '" alt="' + rest.nome + '">';
-                            }
-                            popup += '<h3>' + rest.nome + '</h3>' +
-                                '<p><b>' + rest.endereco + '</b></p>' +
-                                '<button class="btn-ver-mais" onclick="Android.onRestaurantClick(' + index + ')">Ver avaliações</button>' +
-                                '</div>';
-                            
-                            L.marker([lat, lng], { icon: icon }).bindPopup(popup).addTo(map);
+                            L.marker([lat, lng], { icon: icon })
+                                .on('click', function() {
+                                    Android.onRestaurantClick(index);
+                                })
+                                .addTo(map);
                         });
 
                         setTimeout(() => { map.invalidateSize(); }, 500);
@@ -470,7 +563,9 @@ fun LeafletMapView(restaurants: List<Restaurant>, onRestaurantClick: (Restaurant
                     fun onRestaurantClick(index: Int) {
                         val restaurants = currentRestaurants
                         if (index >= 0 && index < restaurants.size) {
-                            currentOnClick(restaurants[index])
+                            Handler(Looper.getMainLooper()).post {
+                                currentOnClick(restaurants[index])
+                            }
                         }
                     }
                 }, "Android")
